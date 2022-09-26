@@ -5,8 +5,7 @@ from typing import Union
 
 class CalAicObj:
 
-    def __init__(self, RSS, tr_S, llf, aa, n):
-        self.RSS = RSS
+    def __init__(self, tr_S, llf, aa, n):
         self.tr_S = tr_S
         self.llf = llf
         self.aa = aa
@@ -15,8 +14,9 @@ class CalAicObj:
 
 class CalMultiObj:
 
-    def __init__(self, betas, reside):
+    def __init__(self, betas, pre, reside):
         self.betas = betas
+        self.pre = pre
         self.reside = reside
 
 
@@ -94,86 +94,86 @@ class Results(BaseModel):
 
 class GWRResults(Results):
 
-    """
-    betas               : array
-                          n*k, estimated coefficients
-
-    predict             : array
-                          n*1, predict y values
-
-    CCT                 : array
-                          n*k, scaled variance-covariance matrix
-
-    df_model            : integer
-                          model degrees of freedom
-
-    df_reside           : integer
-                          residual degrees of freedom
-
-    reside              : array
-                          n*1, residuals of the response
-
-    RSS                 : scalar
-                          residual sum of squares
-
-    CCT                 : array
-                          n*k, scaled variance-covariance matrix
-
-    ENP                 : scalar
-                          effective number of parameters, which depends on
-                          sigma2
-
-    tr_S                : float
-                          trace of S (hat) matrix
-
-    tr_STS              : float
-                          trace of STS matrix
-
-    R2                  : float
-                          R-squared for the entire model (1- RSS/TSS)
-
-    adj_R2              : float
-                          adjusted R-squared for the entire model
-
-    aic                 : float
-                          Akaike information criterion
-
-    aicc                : float
-                          corrected Akaike information criterion
-                          to account for model complexity (smaller
-                          bandwidths)
-
-    bic                 : float
-                          Bayesian information criterion
-
-    sigma2              : float
-                          sigma squared (residual variance) that has been
-                          corrected to account for the ENP
-
-    std_res             : array
-                          n*1, standardised residuals
-
-    bse                 : array
-                          n*k, standard errors of parameters (betas)
-
-    influ               : array
-                          n*1, leading diagonal of S matrix
-
-    CooksD              : array
-                          n*1, Cook's D
-
-    tvalues             : array
-                          n*k, local t-statistics
-
-    llf                 : scalar
-                          log-likelihood of the full model; see
-                          pysal.contrib.glm.family for damily-sepcific
-                          log-likelihoods
-    """
-
     def __init__(
             self, coords, X, y, bw, kernel, fixed, influ, reside, predict_value, betas, CCT, tr_STS
     ):
+        """
+        betas               : array
+                              n*k, estimated coefficients
+
+        predict             : array
+                              n*1, predict y values
+
+        CCT                 : array
+                              n*k, scaled variance-covariance matrix
+
+        df_model            : integer
+                              model degrees of freedom
+
+        df_reside           : integer
+                              residual degrees of freedom
+
+        reside              : array
+                              n*1, residuals of the response
+
+        RSS                 : scalar
+                              residual sum of squares
+
+        CCT                 : array
+                              n*k, scaled variance-covariance matrix
+
+        ENP                 : scalar
+                              effective number of parameters, which depends on
+                              sigma2
+
+        tr_S                : float
+                              trace of S (hat) matrix
+
+        tr_STS              : float
+                              trace of STS matrix
+
+        R2                  : float
+                              R-squared for the entire model (1- RSS/TSS)
+
+        adj_R2              : float
+                              adjusted R-squared for the entire model
+
+        aic                 : float
+                              Akaike information criterion
+
+        aicc                : float
+                              corrected Akaike information criterion
+                              to account for model complexity (smaller
+                              bandwidths)
+
+        bic                 : float
+                              Bayesian information criterion
+
+        sigma2              : float
+                              sigma squared (residual variance) that has been
+                              corrected to account for the ENP
+
+        std_res             : array
+                              n*1, standardised residuals
+
+        bse                 : array
+                              n*k, standard errors of parameters (betas)
+
+        influ               : array
+                              n*1, leading diagonal of S matrix
+
+        CooksD              : array
+                              n*1, Cook's D
+
+        tvalues             : array
+                              n*k, local t-statistics
+
+        llf                 : scalar
+                              log-likelihood of the full model; see
+                              pysal.contrib.glm.family for damily-sepcific
+                              log-likelihoods
+        """
+
         super(GWRResults, self).__init__(
             X, y, kernel, fixed, influ, reside, predict_value, betas, tr_STS)
         self.coords = coords
@@ -184,13 +184,19 @@ class GWRResults(Results):
 
 
 class GTWRResults(Results):
-    """
-    See Also GWRResults
-    """
 
     def __init__(
             self, coords, t, X, y, bw, tau, kernel, fixed, influ, reside, predict_value, betas, CCT, tr_STS
     ):
+        """
+        tau:        : scalar
+                      spatio-temporal scale
+        bw_s        : scalar
+                      spatial bandwidth
+        bw_t        : scalar
+                      temporal bandwidth
+        See Also GWRResults
+        """
 
         super(GTWRResults, self).__init__(X, y, kernel, fixed, influ, reside, predict_value, betas, tr_STS)
         self.coords = coords
@@ -204,21 +210,23 @@ class GTWRResults(Results):
         self.tvalues = self.betas / self.bse
 
 
-class MGTWRResults(BaseModel):
-    """
-    See Also GWRResults
-    """
+class MGWRResults(BaseModel):
 
-    def __init__(self, coords, t, X, y, bws, taus, kernel, fixed, bw_ts, bws_history, taus_history, betas,
+    def __init__(self, coords, X, y, bws, kernel, fixed, bws_history, betas,
                  predict_value, ENP_j, CCT):
-        super(MGTWRResults, self).__init__(X, y, kernel, fixed, constant=False)
+        """
+        bws         : array-like
+                      corresponding spatial bandwidth of all variables
+        ENP_j       : array-like
+                      effective number of paramters, which depends on
+                      sigma2, for each covariate in the model
+
+        See Also GWRResults
+        """
+        super(MGWRResults, self).__init__(X, y, kernel, fixed, constant=False)
         self.coords = coords
-        self.t = t
         self.bws = bws
-        self.taus = taus
-        self.bw_ts = bw_ts
         self.bws_history = bws_history
-        self.taus_history = taus_history
         self.predict_value = predict_value
         self.betas = betas
         self.ENP_j = ENP_j
@@ -240,3 +248,27 @@ class MGTWRResults(BaseModel):
         self.aic_c = self.aic + 2.0 * self.tr_S * (self.tr_S + 1.0) / \
                      (self.n - self.tr_S - 1.0)
         self.bic = -2.0 * self.llf + (self.k + 1) * np.log(self.n)
+
+
+class MGTWRResults(MGWRResults):
+
+    def __init__(self, coords, t, X, y, bws, taus, kernel, fixed, bw_ts, bws_history, taus_history, betas,
+                 predict_value, ENP_j, CCT):
+        """
+        taus        : array-like
+                     corresponding spatio-temporal scale of all variables
+        bws         : array-like
+                     corresponding spatio bandwidth of all variables
+        bw_ts       : array-like
+                     corresponding temporal bandwidth of all variables
+        See Also
+        -------------
+        MGWRResults
+        GWRResults
+        """
+        super(MGTWRResults, self).__init__(
+            coords, X, y, bws, kernel, fixed, bws_history, betas, predict_value, ENP_j, CCT)
+        self.t = t
+        self.taus = taus
+        self.bw_ts = bw_ts
+        self.taus_history = taus_history

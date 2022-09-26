@@ -256,6 +256,83 @@ def twostep_golden_section(
     return opt_bw, opt_tau
 
 
+def multi_bw(init, X, y, n, k, tol, rss_score, gwr_func,
+             bw_func, sel_func, multi_bw_min, multi_bw_max, bws_same_times,
+             verbose=False):
+    """
+    Multiscale GWR bandwidth search procedure using iterative GAM backfitting
+    """
+    if init is None:
+        bw = sel_func(bw_func(X, y))
+        optim_model = gwr_func(X, y, bw)
+    else:
+        bw = init
+        optim_model = gwr_func(X, y, init)
+    bw_gwr = bw
+    err = optim_model.reside
+    betas = optim_model.betas
+    XB = np.multiply(betas, X)
+    rss = np.sum(err ** 2) if rss_score else None
+    scores = []
+    BWs = []
+    bw_stable_counter = 0
+    bws = np.empty(k)
+    Betas = None
+
+    for iters in range(1, 201):
+        new_XB = np.zeros_like(X)
+        Betas = np.zeros_like(X)
+
+        for j in range(k):
+            temp_y = XB[:, j].reshape((-1, 1))
+            temp_y = temp_y + err
+            temp_X = X[:, j].reshape((-1, 1))
+            bw_class = bw_func(temp_X, temp_y)
+
+            if bw_stable_counter >= bws_same_times:
+                # If in backfitting, all bws not changing in bws_same_times (default 5) iterations
+                bw = bws[j]
+            else:
+                bw = sel_func(bw_class, multi_bw_min[j], multi_bw_max[j])
+
+            optim_model = gwr_func(temp_X, temp_y, bw)
+            err = optim_model.reside
+            betas = optim_model.betas
+            new_XB[:, j] = optim_model.pre.reshape(-1)
+            Betas[:, j] = betas.reshape(-1)
+            bws[j] = bw
+
+        # If bws remain the same as from previous iteration
+        if (iters > 1) and np.all(BWs[-1] == bws):
+            bw_stable_counter += 1
+        else:
+            bw_stable_counter = 0
+
+        num = np.sum((new_XB - XB) ** 2) / n
+        den = np.sum(np.sum(new_XB, axis=1) ** 2)
+        score = (num / den) ** 0.5
+        XB = new_XB
+
+        if rss_score:
+            predy = np.sum(np.multiply(betas, X), axis=1).reshape((-1, 1))
+            new_rss = np.sum((y - predy) ** 2)
+            score = np.abs((new_rss - rss) / new_rss)
+            rss = new_rss
+        scores.append(deepcopy(score))
+        delta = score
+        BWs.append(deepcopy(bws))
+
+        if verbose:
+            print("Current iteration:", iters, ",SOC:", np.round(score, 7))
+            print("Bandwidths:", ', '.join([str(bw) for bw in bws]))
+
+        if delta < tol:
+            break
+
+    opt_bw = BWs[-1]
+    return opt_bw, np.array(BWs), np.array(scores), Betas, err, bw_gwr
+
+
 def multi_bws(init_bw, init_tau, X, y, n, k, tol, rss_score,
               gtwr_func, bw_func, sel_func, multi_bw_min, multi_bw_max,
               multi_tau_min, multi_tau_max, verbose=False):

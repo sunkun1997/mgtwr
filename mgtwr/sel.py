@@ -5,7 +5,7 @@ from .diagnosis import get_AICc, get_AIC, get_BIC, get_CV
 from .obj import BaseModel
 from scipy.spatial.distance import pdist
 from .model import GWR, GTWR
-from .function import golden_section, surface_to_plane, print_time, twostep_golden_section, multi_bws
+from .function import golden_section, surface_to_plane, print_time, twostep_golden_section, multi_bw, multi_bws
 
 getDiag = {'AICc': get_AICc, 'AIC': get_AIC, 'BIC': get_BIC, 'CV': get_CV}
 
@@ -161,6 +161,158 @@ class SearchGWRParameter(BaseModel):
             bw_max = c
 
         return bw_min, bw_max
+
+
+class SearchMGWRParameter(BaseModel):
+
+    def __init__(
+            self,
+            coords: Union[np.ndarray, pd.DataFrame],
+            X: Union[np.ndarray, pd.DataFrame],
+            y: Union[np.ndarray, pd.DataFrame],
+            kernel: str = 'exponential',
+            fixed: bool = False,
+            constant: bool = True,
+            convert: bool = False,
+            thread: int = 1
+    ):
+
+        super(SearchMGWRParameter, self).__init__(X, y, kernel, fixed, constant)
+        if isinstance(coords, pd.DataFrame):
+            coords = coords.values
+        self.coords = coords
+        if convert:
+            longitude = coords[:, 0]
+            latitude = coords[:, 1]
+            longitude, latitude = surface_to_plane(longitude, latitude)
+            self.coords = np.hstack([longitude, latitude])
+        self.int_score = not self.fixed
+        self.thread = thread
+        self.criterion = None
+        self.bws = None
+        self.tol = None
+        self.bw_decimal = None
+
+    @print_time
+    def search(
+            self,
+            criterion: str = 'AICc',
+            bw_min: float = None,
+            bw_max: float = None,
+            tol: float = 1.0e-6,
+            bw_decimal: int = 1,
+            init_bw: float = None,
+            multi_bw_min: list = None,
+            multi_bw_max: list = None,
+            tol_multi: float = 1.0e-5,
+            bws_same_times: int = 5,
+            verbose: bool = False,
+            rss_score: bool = False,
+            time_cost: bool = False
+            ):
+        """
+        Method to select one unique bandwidth and Spatio-temporal scale for a gtwr model or a
+        bandwidth vector and Spatio-temporal scale vector for a mgwr model.
+
+        Parameters
+        ----------
+        criterion      : string
+                         bw selection criterion: 'AICc', 'AIC', 'BIC', 'CV'
+        bw_min         : float
+                         min value used in bandwidth search
+        bw_max         : float
+                         max value used in bandwidth search
+        multi_bw_min   : list
+                         min values used for each covariate in mgwr bandwidth search.
+                         Must be either a single value or have one value for
+                         each covariate including the intercept
+        multi_bw_max   : list
+                         max values used for each covariate in mgwr bandwidth
+                         search. Must be either a single value or have one value
+                         for each covariate including the intercept
+        tol            : float
+                         tolerance used to determine convergence
+        bw_decimal     : int
+                        The number of bw decimal places reserved
+        init_bw        : float
+                         None (default) to initialize MGTWR with a bandwidth
+                         derived from GTWR. Otherwise this option will choose the
+                         bandwidth to initialize MGWR with.
+        tol_multi      : convergence tolerance for the multiple bandwidth
+                         back fitting algorithm; a larger tolerance may stop the
+                         algorithm faster though it may result in a less optimal
+                         model
+        bws_same_times : If bandwidths keep the same between iterations for
+                         bws_same_times (default 5) in backfitting, then use the
+                         current set of bandwidths as final bandwidths.
+        rss_score      : True to use the residual sum of squares to evaluate
+                         each iteration of the multiple bandwidth back fitting
+                         routine and False to use a smooth function; default is
+                         False
+        verbose        : Boolean
+                         If true, bandwidth searching history is printed out; default is False.
+        time_cost      : bool
+                        If true, print run time
+        """
+        self.criterion = criterion
+        self.tol = tol
+        self.bw_decimal = bw_decimal
+        if multi_bw_min is not None:
+            if len(multi_bw_min) == self.k:
+                multi_bw_min = multi_bw_min
+            elif len(multi_bw_min) == 1:
+                multi_bw_min = multi_bw_min * self.k
+            else:
+                raise AttributeError(
+                    "multi_bw_min must be either a list containing"
+                    " a single entry or a list containing an entry for each of k"
+                    " covariates including the intercept")
+        else:
+            a = self._init_section(bw_min, bw_max)[0]
+            multi_bw_min = [a] * self.k
+
+        if multi_bw_max is not None:
+            if len(multi_bw_max) == self.k:
+                multi_bw_max = multi_bw_max
+            elif len(multi_bw_max) == 1:
+                multi_bw_max = multi_bw_max * self.k
+            else:
+                raise AttributeError(
+                    "multi_bw_max must be either a list containing"
+                    " a single entry or a list containing an entry for each of k"
+                    " covariates including the intercept")
+        else:
+            c = self._init_section(bw_min, bw_max)[1]
+            multi_bw_max = [c] * self.k
+
+        self.bws = multi_bw(init_bw, self.X, self.y, self.n, self.k, tol_multi,
+                            rss_score, self.gwr_func, self.bw_func, self.sel_func, multi_bw_min, multi_bw_max,
+                            bws_same_times, verbose=verbose)
+        return self.bws
+
+    def gwr_func(self, X, y, bw):
+        res = GWR(self.coords, X, y, bw, kernel=self.kernel,
+                  fixed=self.fixed, constant=False, thread=self.thread).cal_multi()
+        return res
+
+    def bw_func(self, X, y):
+        selector = SearchGWRParameter(self.coords, X, y, kernel=self.kernel, fixed=self.fixed,
+                                      constant=False, thread=self.thread)
+        return selector
+
+    def sel_func(self, bw_func, bw_min=None, bw_max=None):
+        return bw_func.search(criterion=self.criterion, bw_min=bw_min, bw_max=bw_max,
+                              tol=self.tol, bw_decimal=self.bw_decimal, verbose=False)
+
+    def _init_section(self, bw_min, bw_max):
+
+        a = bw_min if bw_min is not None else 0
+        if bw_max is not None:
+            c = bw_max
+        else:
+            c = max(np.max(self.coords[:, 0]) - np.min(self.coords[:, 0]),
+                    np.max(self.coords[:, 1]) - np.min(self.coords[:, 1]))
+        return a, c
 
 
 class SearchGTWRParameter(BaseModel):
