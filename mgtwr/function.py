@@ -339,7 +339,7 @@ def multi_bws(init_bw, init_tau, X, y, n, k, tol, rss_score,
     """
     Multiscale GTWR bandwidth search procedure using iterative GAM back fitting
     """
-    if init_bw or init_tau is None:
+    if (init_bw is None) or (init_tau is None):
         bw, tau = sel_func(bw_func(X, y))
     else:
         bw, tau = init_bw, init_tau

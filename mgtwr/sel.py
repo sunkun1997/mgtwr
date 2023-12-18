@@ -152,9 +152,17 @@ class SearchGWRParameter(BaseModel):
             a = 40 + 2 * n_vars
             c = n
         else:
-            sq_dists = pdist(self.coords)
-            a = np.min(sq_dists) / 2.0
-            c = np.max(sq_dists)
+            try:
+                coords = np.unique(self.coords, axis=0)
+                sq_dists = pdist(coords)
+                a = np.min(sq_dists) / 2.0
+                c = np.max(sq_dists)
+            except MemoryError:
+                # Note that the value obtained in this way is not the maximum distance of all points,
+                # but the upper bound of the search has little effect on the results of the model
+                coords = sorted(self.coords, key=lambda x: x[0] ** 2 + x[1] ** 2)
+                a = pdist(coords[:2])[0]
+                c = pdist([coords[0], coords[-1]])[0]
         if bw_min is None:
             bw_min = a
         if bw_max is None:
@@ -469,9 +477,17 @@ class SearchGTWRParameter(BaseModel):
             a = 40 + 2 * n_vars
             c = n
         else:
-            sq_dists = pdist(self.coords)
-            a = np.min(sq_dists) / 2.0
-            c = np.max(sq_dists)
+            try:
+                coords = np.unique(self.coords, axis=0)
+                sq_dists = pdist(coords)
+                a = np.min(sq_dists) / 2.0
+                c = np.max(sq_dists)
+            except MemoryError:
+                # Note that the value obtained in this way is not the maximum distance of all points,
+                # but the upper bound of the search has little effect on the results of the model
+                coords = sorted(self.coords, key=lambda x: x[0] ** 2 + x[1] ** 2)
+                a = pdist(coords[:2])[0]
+                c = pdist([coords[0], coords[-1]])[0]
 
         if bw_min is None:
             bw_min = a
