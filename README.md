@@ -13,7 +13,7 @@ Crucial 16GB DDR5-4800 UDIMM
 (My computer configuration isn't that low also so I'm very sad why I have to run for 11 minutes when it's only 6 minutes in the example)
 
 # result comparison:
-1.Orginal(**thread=1**)
+1. Orginal(**thread=1**)
 **time cost: 0:11:3.748**
          636805417 function calls (613137518 primitive calls) in 663.749 seconds
 
@@ -41,7 +41,7 @@ Crucial 16GB DDR5-4800 UDIMM
    ncalls  tottime  percall  cumtime  percall filename:lineno(function)
  10310899  409.240    0.000  409.240    0.000 {method 'acquire' of '_thread.lock' objects}
 
-4.joblib(**thread=15**)
+4. joblib(**thread=15**)
 time cost: 0:03:40.609
          12395230 function calls (12381086 primitive calls) in 220.610 seconds
 
