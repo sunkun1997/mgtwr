@@ -22,6 +22,7 @@ Crucial 16GB DDR5-4800 UDIMM
    ncalls  tottime  percall  cumtime  percall filename:lineno(function)
   2151360  169.201    0.000  225.785    0.000 d:\anaconda\Lib\site-packages\scipy\linalg\_basic.py:40(solve)
 19328497/15022891   35.541    0.000   81.668    0.000 {built-in method numpy.core._multiarray_umath.implement_array_function}
+
 2. Original(thread=15)
 **time cost: 0:24:29.669**
          6022657 function calls (6019718 primitive calls) in 1469.671 seconds
