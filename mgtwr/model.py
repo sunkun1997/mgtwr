@@ -5,6 +5,7 @@ import multiprocessing as mp
 from .kernel import GWRKernel, GTWRKernel
 from .function import _compute_betas_gwr, surface_to_plane
 from .obj import CalAicObj, CalMultiObj, BaseModel, GWRResults, GTWRResults, MGWRResults, MGTWRResults
+from joblib import Parallel, delayed
 
 
 class GWR(BaseModel):
@@ -115,8 +116,7 @@ class GWR(BaseModel):
         use for calculating AICc, BIC, CV and so on.
         """
         if self.thread > 1:
-            pool = mp.Pool(self.thread)
-            result = list(zip(*pool.map(self._search_local_fit, range(self.n))))
+            result = list(zip(*Parallel(n_jobs=self.thread)(delayed(self._search_local_fit)(i) for i in range(self.n))))
         else:
             result = list(zip(*map(self._search_local_fit, range(self.n))))
         err2 = np.array(result[0]).reshape(-1, 1)
@@ -159,8 +159,7 @@ class GWR(BaseModel):
         calculate betas, predict value and reside, use for searching best bandwidth in MGWR model by backfitting.
         """
         if self.thread > 1:
-            pool = mp.Pool(self.thread)
-            result = list(zip(*pool.map(self._multi_fit, range(self.n))))
+            result = list(zip(*Parallel(n_jobs=self.thread)(delayed(self._multi_fit)(i) for i in range(self.n))))
         else:
             result = list(zip(*map(self._multi_fit, range(self.n))))
         betas = np.array(result[0])
@@ -173,8 +172,7 @@ class GWR(BaseModel):
         To fit GWR model
         """
         if self.thread > 1:
-            pool = mp.Pool(self.thread)
-            result = list(zip(*pool.map(self._local_fit, range(self.n))))
+            result = list(zip(*Parallel(n_jobs=self.thread)(delayed(self._local_fit)(i) for i in range(self.n))))
         else:
             result = list(zip(*map(self._local_fit, range(self.n))))
         influ = np.array(result[0]).reshape(-1, 1)
@@ -450,12 +448,12 @@ class GTWR(BaseModel):
         return wi
 
     def cal_aic(self):
+
         """
         use for calculating AICc, BIC, CV and so on.
         """
         if self.thread > 1:
-            pool = mp.Pool(self.thread)
-            result = list(zip(*pool.map(self._search_local_fit, range(self.n))))
+            result = list(zip(*Parallel(n_jobs=self.thread)(delayed(self._search_local_fit)(i) for i in range(self.n))))
         else:
             result = list(zip(*map(self._search_local_fit, range(self.n))))
         err2 = np.array(result[0]).reshape(-1, 1)
@@ -498,8 +496,7 @@ class GTWR(BaseModel):
         calculate betas, predict value and reside, use for searching best bandwidth in MGWR model by backfitting.
         """
         if self.thread > 1:
-            pool = mp.Pool(self.thread)
-            result = list(zip(*pool.map(self._multi_fit, range(self.n))))
+            result = list(zip(*Parallel(n_jobs=self.thread)(delayed(self._multi_fit)(i) for i in range(self.n))))
         else:
             result = list(zip(*map(self._multi_fit, range(self.n))))
         betas = np.array(result[0])
@@ -513,10 +510,9 @@ class GTWR(BaseModel):
 
         """
         if self.thread > 1:
-            pool = mp.Pool(self.thread)
-            result = list(zip(*pool.map(self._local_fit, range(self.n))))
+            result = list(zip(*Parallel(n_jobs=self.thread)(delayed(self._local_fit)(i) for i in range(self.n))))
         else:
-            result = list(zip(*map(self._local_fit, range(self.n))))
+                result = list(zip(*map(self._local_fit, range(self.n))))
         influ = np.array(result[0]).reshape(-1, 1)
         reside = np.array(result[1]).reshape(-1, 1)
         predict_value = np.array(result[2]).reshape(-1, 1)
