@@ -50,8 +50,8 @@ class GWR(BaseModel):
                         'exponential'
 
         fixed         : bool
-                        True for distance based kernel function and  False for
-                        adaptive (nearest neighbor) kernel function (default)
+                        True for distance based kernel function (default) and
+                        False for adaptive (nearest neighbor) kernel function
 
         constant      : bool
                         True to include intercept (default) in model and False to exclude
@@ -228,8 +228,8 @@ class MGWR(GWR):
                         'exponential'
 
         fixed         : bool
-                        True for distance based kernel function and  False for
-                        adaptive (nearest neighbor) kernel function (default)
+                        True for distance based kernel function (default) and  False for
+                        adaptive (nearest neighbor) kernel function
 
         constant      : bool
                         True to include intercept (default) in model and False to exclude
@@ -323,16 +323,25 @@ class MGWR(GWR):
 
         return ENP_j, CCT,
 
-    def fit(self, n_chunks=1):
+    def fit(self, n_chunks: int = 1, skip_calculate: bool = False):
         """
         Compute MGWR inference by chunk to reduce memory footprint.
+        Parameters
+        ----------
+        n_chunks       : int
+                         divided into n_chunks steps to reduce memory consumption
+        skip_calculate : bool
+                         if True, skip calculate CCT, ENP and other variables derived from it
         """
-        self.n_chunks = n_chunks
         pre = np.sum(self.X * self.betas, axis=1).reshape(-1, 1)
-        result = map(self._chunk_compute, (range(n_chunks)))
-        result_list = list(zip(*result))
-        ENP_j = np.sum(np.array(result_list[0]), axis=0)
-        CCT = np.sum(np.array(result_list[1]), axis=0)
+        ENP_j = None
+        CCT = None
+        if not skip_calculate:
+            self.n_chunks = n_chunks
+            result = map(self._chunk_compute, (range(n_chunks)))
+            result_list = list(zip(*result))
+            ENP_j = np.sum(np.array(result_list[0]), axis=0)
+            CCT = np.sum(np.array(result_list[1]), axis=0)
         return MGWRResults(
             self.coords, self.X, self.y, self.bws, self.kernel, self.fixed,
             self.bws_history, self.betas, pre, ENP_j, CCT)
@@ -373,8 +382,8 @@ class GTWR(BaseModel):
                     'exponential'
 
     fixed         : bool
-                    True for distance based kernel function and  False for
-                    adaptive (nearest neighbor) kernel function (default)
+                    True for distance based kernel function (default) and
+                    False for adaptive (nearest neighbor) kernel function
 
     constant      : bool
                     True to include intercept (default) in model and False to exclude
@@ -558,8 +567,8 @@ class MGTWR(GTWR):
                     'exponential'
 
     fixed         : bool
-                    True for distance based kernel function and  False for
-                    adaptive (nearest neighbor) kernel function (default)
+                    True for distance based kernel function (default) and  False for
+                    adaptive (nearest neighbor) kernel function
 
     constant      : bool
                     True to include intercept (default) in model and False to exclude
@@ -665,16 +674,25 @@ class MGTWR(GTWR):
 
         return ENP_j, CCT,
 
-    def fit(self, n_chunks=1):
+    def fit(self, n_chunks: int = 1, skip_calculate: bool = False):
         """
         Compute MGTWR inference by chunk to reduce memory footprint.
+        Parameters
+        ----------
+        n_chunks       : int
+                         divided into n_chunks steps to reduce memory consumption
+        skip_calculate : bool
+                         if True, skip calculate CCT, ENP and other variables derived from it
         """
-        self.n_chunks = n_chunks
         pre = np.sum(self.X * self.betas, axis=1).reshape(-1, 1)
-        result = map(self._chunk_compute, (range(n_chunks)))
-        result_list = list(zip(*result))
-        ENP_j = np.sum(np.array(result_list[0]), axis=0)
-        CCT = np.sum(np.array(result_list[1]), axis=0)
+        ENP_j = None
+        CCT = None
+        if not skip_calculate:
+            self.n_chunks = n_chunks
+            result = map(self._chunk_compute, (range(n_chunks)))
+            result_list = list(zip(*result))
+            ENP_j = np.sum(np.array(result_list[0]), axis=0)
+            CCT = np.sum(np.array(result_list[1]), axis=0)
         return MGTWRResults(
             self.coords, self.t, self.X, self.y, self.bws, self.taus, self.kernel, self.fixed, self.bw_ts,
             self.bws_history, self.taus_history, self.betas, pre, ENP_j, CCT)

@@ -229,25 +229,24 @@ class MGWRResults(BaseModel):
         self.bws_history = bws_history
         self.predict_value = predict_value
         self.betas = betas
-        self.ENP_j = ENP_j
         self.reside = self.y - self.predict_value
-        self.tr_S = np.sum(self.ENP_j)
-        self.ENP = self.tr_S
         self.TSS = np.sum((self.y - np.mean(self.y)) ** 2)
         self.RSS = np.sum(self.reside ** 2)
-        self.sigma2 = self.RSS / (self.n - self.tr_S)
-        self.CCT = CCT * self.sigma2
-        self.bse = np.sqrt(self.CCT)
-        self.t_values = self.betas / self.bse
-        self.df_model = self.n - self.tr_S
         self.R2 = 1 - self.RSS / self.TSS
-        self.adj_R2 = 1 - (1 - self.R2) * (self.n - 1) / (self.n - self.ENP - 1)
-        self.llf = -np.log(self.RSS) * self.n / \
-                   2 - (1 + np.log(np.pi / self.n * 2)) * self.n / 2
-        self.aic = -2.0 * self.llf + 2.0 * (self.tr_S + 1)
-        self.aic_c = self.aic + 2.0 * self.tr_S * (self.tr_S + 1.0) / \
-                     (self.n - self.tr_S - 1.0)
+        self.llf = -np.log(self.RSS) * self.n / 2 - (1 + np.log(np.pi / self.n * 2)) * self.n / 2
         self.bic = -2.0 * self.llf + (self.k + 1) * np.log(self.n)
+        if ENP_j is not None:
+            self.ENP_j = ENP_j
+            self.tr_S = np.sum(self.ENP_j)
+            self.ENP = self.tr_S
+            self.sigma2 = self.RSS / (self.n - self.tr_S)
+            self.CCT = CCT * self.sigma2
+            self.bse = np.sqrt(self.CCT)
+            self.t_values = self.betas / self.bse
+            self.df_model = self.n - self.tr_S
+            self.adj_R2 = 1 - (1 - self.R2) * (self.n - 1) / (self.n - self.ENP - 1)
+            self.aic = -2.0 * self.llf + 2.0 * (self.tr_S + 1)
+            self.aic_c = self.aic + 2.0 * self.tr_S * (self.tr_S + 1.0) / (self.n - self.tr_S - 1.0)
 
 
 class MGTWRResults(MGWRResults):

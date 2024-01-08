@@ -1,7 +1,7 @@
 import setuptools
 
 setuptools.setup(
-    version="2.0.4",
+    version="2.0.5",
     long_description="To fit geographically weighted model, "
                      "multiscale geographically weighted regression model, "
                      "geographically and temporally weighted regression model and "
